@@ -5,9 +5,8 @@ import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import fastifyCors from '@fastify/cors';
 import fastifyEnv from '@fastify/env';
 import fastifyHelmet from '@fastify/helmet';
-import fastifyJwt from '@fastify/jwt';
 import { schemaErrorFormatter } from '@/utils/schemaErrorFormatter';
-import { CREDENTIALS, SECRET_KEY } from '@/config';
+import { CREDENTIALS } from '@/config';
 import { schema } from '@/utils/validateEnv';
 import '@/extensions';
 import { logger } from '@/libs/logger';
@@ -37,10 +36,6 @@ async function startServer() {
     credentials: CREDENTIALS === 'true',
   });
   await app.register(fastifyHelmet);
-  await app.register(fastifyJwt, {
-    secret: SECRET_KEY ?? '',
-    sign: { expiresIn: '7d' },
-  });
 
   await app.register(AutoLoad, {
     dir: join(__dirname, '/plugins'),
