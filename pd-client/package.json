@@ -1,0 +1,47 @@
+{
+  "name": "pd-client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.8.2",
+    "@supabase/supabase-js": "^2.49.9",
+    "@tailwindcss/vite": "^4.1.7",
+    "@tanstack/query-sync-storage-persister": "^5.77.0",
+    "@tanstack/react-query": "^5.77.0",
+    "@tanstack/react-query-persist-client": "^5.77.0",
+    "@tanstack/react-router": "^1.120.10",
+    "@tanstack/react-router-devtools": "^1.120.10",
+    "@tanstack/react-store": "^0.7.0",
+    "@tanstack/router-plugin": "^1.120.10",
+    "immer": "^10.1.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-redux": "^9.2.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.25.0",
+    "@tailwindcss/postcss7-compat": "^2.2.17",
+    "@tanstack/react-query-devtools": "^5.77.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.25.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "postcss": "^8.5.5",
+    "tailwindcss": "^4.1.10",
+    "typescript": "~5.8.3",
+    "typescript-eslint": "^8.30.1",
+    "vite": "^6.3.5"
+  }
+}
