@@ -25,7 +25,7 @@
       "@/*": ["*"],
       "@config": ["config"],
       "@interfaces/*": ["interfaces/*"],
-      "@utils/*": ["utils/*"],
+      "@utils/*": ["src/utils/*"],
       "@constants/*": ["constants/*"],
       "@plugins/*": ["plugins/*"],
       "@modules/*": ["modules/*"],
