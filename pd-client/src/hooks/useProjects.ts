@@ -10,6 +10,8 @@ export const projectKeys = {
   all: ["projects"] as const,
   lists: () => [...projectKeys.all, "list"] as const,
   detail: (id: string) => [...projectKeys.all, "detail", id] as const,
+  detailWithStructure: (id: string) =>
+    [...projectKeys.all, "detail-structure", id] as const,
 } as const;
 
 /**
@@ -32,6 +34,18 @@ export function useProject(projectId: string, enabled = true) {
     queryFn: () => projectService.getProjectById(projectId),
     enabled: enabled && !!projectId,
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+/**
+ * Hook to fetch detailed project structure with directories and prompts
+ */
+export function useProjectDetails(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: projectKeys.detailWithStructure(projectId),
+    queryFn: () => projectService.getProjectDetails(projectId),
+    enabled: enabled && !!projectId,
+    staleTime: 2 * 60 * 1000, // 2 minutes (shorter for structure data)
   });
 }
 

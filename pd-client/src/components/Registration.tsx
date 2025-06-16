@@ -89,6 +89,7 @@ export function Registration() {
       // Auto-redirect to projects page
       navigate({ to: "/projects" });
     } catch (err) {
+      console.error(err);
       dispatch(registerFailure("Registration failed. Please try again."));
     }
   };

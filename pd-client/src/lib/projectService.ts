@@ -14,6 +14,22 @@ export interface Project {
   }[];
 }
 
+export interface DirectoryItem {
+  id: string;
+  name: string;
+  description?: string;
+  type: "directory" | "prompt";
+  isRoot?: boolean;
+  children?: DirectoryItem[];
+  prompts?: DirectoryItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectDetails extends Omit<Project, "users"> {
+  directories: DirectoryItem[];
+}
+
 export interface CreateProjectData {
   name: string;
   description?: string;
@@ -28,6 +44,11 @@ export interface ProjectsResponse {
 export interface ProjectResponse {
   message: string;
   project: Project;
+}
+
+export interface ProjectDetailsResponse {
+  message: string;
+  project: ProjectDetails;
 }
 
 const API_BASE_URL =
@@ -59,9 +80,9 @@ export class ProjectService {
 
       const data: ProjectsResponse = await response.json();
       return data.projects;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching projects:", error);
-      throw error;
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
@@ -91,9 +112,9 @@ export class ProjectService {
 
       const data: ProjectResponse = await response.json();
       return data.project;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error creating project:", error);
-      throw error;
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
@@ -125,9 +146,43 @@ export class ProjectService {
 
       const data: ProjectResponse = await response.json();
       return data.project;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching project:", error);
-      throw error;
+      throw error instanceof Error ? error : new Error(String(error));
+    }
+  }
+
+  /**
+   * Get detailed project structure with directories and prompts
+   */
+  static async getProjectDetails(projectId: string): Promise<ProjectDetails> {
+    try {
+      const token = await authService.getSessionToken();
+      if (!token) {
+        throw new Error("No authentication token available");
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/projects/${projectId}/details`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to fetch project details");
+      }
+
+      const data: ProjectDetailsResponse = await response.json();
+      return data.project;
+    } catch (error) {
+      console.error("Error fetching project details:", error);
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 }

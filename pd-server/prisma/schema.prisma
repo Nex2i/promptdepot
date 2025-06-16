@@ -52,9 +52,10 @@ model Project {
     updatedAt   DateTime @updatedAt
 
     // Relationships
-    tenant   Tenant        @relation(fields: [tenantId], references: [id])
-    tenantId String
-    users    ProjectUser[]
+    tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+    tenantId    String
+    users       ProjectUser[]
+    directories Directory[]
 
     @@map("projects")
 }
@@ -66,9 +67,9 @@ model UserTenant {
     updatedAt   DateTime @updatedAt
 
     // Relationships
-    user     User   @relation(fields: [userId], references: [id])
+    user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
     userId   String
-    tenant   Tenant @relation(fields: [tenantId], references: [id])
+    tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
     tenantId String
 
     @@unique([userId, tenantId])
@@ -82,11 +83,52 @@ model ProjectUser {
     updatedAt   DateTime            @updatedAt
 
     // Relationships
-    user      User    @relation(fields: [userId], references: [id])
+    user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
     userId    String
-    project   Project @relation(fields: [projectId], references: [id])
+    project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
     projectId String
 
     @@unique([userId, projectId])
     @@map("project_users")
+}
+
+model Directory {
+    id          String   @id @default(cuid())
+    name        String
+    description String?
+    isRoot      Boolean  @default(false) // Indicates if this is the root directory of a project
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    // Relationships
+    project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+    projectId String
+
+    // Self-referential relationship for nested directories
+    // Root directories have parentId = null
+    parent   Directory?  @relation("DirectoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+    parentId String?
+    children Directory[] @relation("DirectoryHierarchy")
+
+    // Content relationships - directories can contain both child directories AND prompts
+    prompts Prompt[]
+
+    // Ensure only one root directory per project
+    @@unique([projectId, isRoot], name: "unique_root_per_project")
+    @@map("directories")
+}
+
+model Prompt {
+    id          String   @id @default(cuid())
+    name        String
+    content     String
+    description String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    // Relationships
+    directory   Directory @relation(fields: [directoryId], references: [id], onDelete: Cascade)
+    directoryId String
+
+    @@map("prompts")
 }

@@ -33,7 +33,7 @@ export function CreateProjectModal({
       setFormData({ name: "", description: "" });
       createMutation.reset(); // Clear any previous mutation state
     }
-  }, [isOpen]);
+  }, [isOpen, createMutation]);
 
   // Close modal on successful creation
   useEffect(() => {

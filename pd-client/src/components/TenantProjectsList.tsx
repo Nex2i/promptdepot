@@ -1,17 +1,18 @@
-import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useAppSelector } from "../store/hooks";
 import { useProjects } from "../hooks/useProjects";
+import type { Project } from "../lib/projectService";
 
 export function TenantProjectsList() {
   const { user } = useAppSelector((state) => state.auth);
-  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const navigate = useNavigate();
 
   // Use TanStack Query for project data
   const { data: projects = [], isLoading, error } = useProjects();
 
-  const handleProjectClick = (project: any) => {
-    setSelectedProject(project);
+  const handleProjectClick = (project: Project) => {
+    // Navigate to project view
+    navigate({ to: `/projects/${project.id}` });
   };
 
   return (
@@ -57,11 +58,7 @@ export function TenantProjectsList() {
               <div
                 key={project.id}
                 onClick={() => handleProjectClick(project)}
-                className={`bg-white/5 rounded-lg p-6 cursor-pointer transition-all hover:bg-white/10 hover:-translate-y-1 ${
-                  selectedProject?.id === project.id
-                    ? "ring-2 ring-primary"
-                    : ""
-                }`}
+                className="bg-white/5 rounded-lg p-6 cursor-pointer transition-all hover:bg-white/10 hover:-translate-y-1 hover:ring-2 hover:ring-primary"
               >
                 <h3 className="text-xl font-semibold mb-3">{project.name}</h3>
                 <p className="text-gray-400 mb-4 line-clamp-2">
@@ -91,40 +88,6 @@ export function TenantProjectsList() {
             <button className="bg-primary hover:bg-primary-light px-6 py-3 rounded-lg font-medium transition-colors">
               Create Project
             </button>
-          </div>
-        )}
-
-        {/* Selected Project Info */}
-        {selectedProject && (
-          <div className="mt-8 bg-white/5 rounded-lg p-6">
-            <h2 className="text-2xl font-bold mb-4">Selected Project</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h3 className="font-semibold mb-2">Project Details</h3>
-                <p className="mb-1">
-                  <strong>Name:</strong> {selectedProject.name}
-                </p>
-                <p className="mb-1">
-                  <strong>Description:</strong>{" "}
-                  {selectedProject.description || "No description"}
-                </p>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">Metadata</h3>
-                <p className="mb-1">
-                  <strong>Created:</strong>{" "}
-                  {new Date(selectedProject.createdAt).toLocaleString()}
-                </p>
-                <p className="mb-1">
-                  <strong>Updated:</strong>{" "}
-                  {new Date(selectedProject.updatedAt).toLocaleString()}
-                </p>
-                <p>
-                  <strong>Permissions:</strong>{" "}
-                  {selectedProject.permissions?.join(", ") || "None"}
-                </p>
-              </div>
-            </div>
           </div>
         )}
       </div>

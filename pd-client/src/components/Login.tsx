@@ -8,6 +8,7 @@ import {
 } from "../store/slices/authSlice";
 import { supabase } from "../lib/supabaseClient";
 import { apiClient } from "../lib/api";
+import type { LoginSearchParams } from "../types";
 
 export function Login() {
   const [email, setEmail] = useState("");
@@ -19,8 +20,8 @@ export function Login() {
   );
 
   // Get redirect parameter from URL search params
-  const search = useSearch({ from: "/login" });
-  const redirectTo = (search as any)?.redirect || "/projects";
+  const search = useSearch({ from: "/login" }) as LoginSearchParams;
+  const redirectTo = search?.redirect || "/projects";
 
   // Check if user is already authenticated
   useEffect(() => {
@@ -70,6 +71,7 @@ export function Login() {
       // Navigate to redirect URL or projects page after successful login
       navigate({ to: redirectTo });
     } catch (err) {
+      console.error(err);
       dispatch(loginFailure("Login failed. Please try again."));
     }
   };

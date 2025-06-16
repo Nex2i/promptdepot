@@ -1,6 +1,12 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:8085/api";
 
+import type {
+  SupabaseSession,
+  CreateUserData,
+  CreateUserResponse,
+} from "../types";
+
 export interface ApiResponse<T> {
   data?: T;
   message?: string;
@@ -38,7 +44,7 @@ export interface RegisterResponse {
     id: string;
     name: string;
   };
-  session?: any;
+  session?: SupabaseSession;
 }
 
 export interface MeResponse {
@@ -107,7 +113,10 @@ class ApiClient {
     });
   }
 
-  async createUser(userData: any, token: string): Promise<ApiResponse<any>> {
+  async createUser(
+    userData: CreateUserData,
+    token: string
+  ): Promise<ApiResponse<CreateUserResponse>> {
     return this.request("/auth/users", {
       method: "POST",
       headers: {

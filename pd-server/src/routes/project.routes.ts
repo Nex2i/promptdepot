@@ -225,4 +225,99 @@ export default async function ProjectRoutes(fastify: FastifyInstance, _opts: Rou
       }
     },
   });
+
+  // GET /projects/:projectId/details - Get detailed project with directories and prompts (4 levels deep)
+  fastify.route({
+    method: HttpMethods.GET,
+    url: `${basePath}/:projectId/details`,
+    preHandler: [fastify.authPrehandler],
+    schema: {
+      params: Type.Object({
+        projectId: Type.String(),
+      }),
+      tags: ['Projects'],
+      summary: 'Get Detailed Project Structure',
+      description: 'Get project with full directory hierarchy and items up to 4 levels deep',
+      response: {
+        200: Type.Object({
+          message: Type.String(),
+          project: Type.Object({
+            id: Type.String(),
+            name: Type.String(),
+            description: Type.Optional(Type.String()),
+            tenantId: Type.String(),
+            createdAt: Type.String(),
+            updatedAt: Type.String(),
+            permissions: Type.Array(Type.String()),
+            directories: Type.Array(
+              Type.Object({
+                id: Type.String(),
+                name: Type.String(),
+                description: Type.Optional(Type.String()),
+                isRoot: Type.Boolean(),
+                type: Type.Literal('directory'),
+                children: Type.Array(Type.Any()), // Recursive structure
+                prompts: Type.Array(
+                  Type.Object({
+                    id: Type.String(),
+                    name: Type.String(),
+                    description: Type.Optional(Type.String()),
+                    type: Type.Literal('prompt'),
+                    createdAt: Type.String(),
+                    updatedAt: Type.String(),
+                  })
+                ),
+                createdAt: Type.String(),
+                updatedAt: Type.String(),
+              })
+            ),
+          }),
+        }),
+      },
+    },
+    handler: async (
+      request: FastifyRequest<{
+        Params: {
+          projectId: string;
+        };
+      }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const supabaseUser = (request as any).user;
+
+        if (!supabaseUser?.id) {
+          reply.status(401).send({ message: 'User not authenticated' });
+          return;
+        }
+
+        const user = await UserService.getUserBySupabaseId(supabaseUser.id);
+        if (!user) {
+          reply.status(404).send({ message: 'User not found in database' });
+          return;
+        }
+
+        const { projectId } = request.params;
+
+        // Get project with detailed structure
+        const projectDetails = await ProjectService.getProjectDetails(projectId, user.id, 4);
+
+        if (!projectDetails) {
+          reply.status(404).send({ message: 'Project not found or no access' });
+          return;
+        }
+
+        reply.status(200).send({
+          message: 'Project details retrieved successfully',
+          project: projectDetails,
+        });
+      } catch (error: any) {
+        fastify.log.error(`Error fetching project details: ${error.message}`);
+        reply.status(500).send({
+          message: 'Failed to fetch project details',
+          error: error.message,
+        });
+      }
+    },
+  });
 }

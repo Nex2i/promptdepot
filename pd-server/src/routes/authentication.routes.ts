@@ -3,7 +3,7 @@ import { Type } from '@sinclair/typebox';
 import { HttpMethods } from '@/utils/HttpMethods';
 import { supabase } from '@/libs/supabaseClient';
 import { UserService, CreateUserData } from '@/modules/user.service';
-import { TenantService, CreateTenantData } from '@/modules/tenant.service';
+import { TenantService } from '@/modules/tenant.service';
 
 const basePath = '/auth';
 

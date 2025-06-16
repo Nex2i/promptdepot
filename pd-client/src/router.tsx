@@ -2,14 +2,16 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-  Outlet,
-  Link,
   redirect,
+  type ParsedLocation,
 } from "@tanstack/react-router";
 import { Login } from "./components/Login";
 import { Registration } from "./components/Registration";
-import { Dashboard } from "./components/Dashboard";
+import { ProjectView } from "./components/ProjectView";
 import { authService } from "./lib/authService";
+import { TenantProjectsList } from "./components/TenantProjectsList";
+import { LandingPage } from "./components/LandingPage";
+import { RootLayout } from "./components/RootLayout";
 
 // Shared auth guard functions
 const authGuards = {
@@ -17,7 +19,7 @@ const authGuards = {
    * For protected routes - requires authentication
    * Redirects to login if not authenticated
    */
-  requireAuth: async ({ location }: { location: any }) => {
+  requireAuth: async ({ location }: { location: ParsedLocation }) => {
     const isAuthenticated = await authService.isAuthenticated();
 
     if (!isAuthenticated) {
@@ -60,18 +62,9 @@ const authGuards = {
   },
 };
 
-// Root route component
-const RootComponent = () => {
-  return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <Outlet />
-    </div>
-  );
-};
-
 // Create the root route
 const rootRoute = createRootRoute({
-  component: RootComponent,
+  component: RootLayout,
 });
 
 // Create child routes with shared auth guards
@@ -93,7 +86,15 @@ const registrationRoute = createRoute({
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/projects",
-  component: Dashboard,
+  component: TenantProjectsList,
+  beforeLoad: authGuards.requireAuth,
+});
+
+// Protected route for individual project view
+const projectViewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/projects/$projectId",
+  component: ProjectView,
   beforeLoad: authGuards.requireAuth,
 });
 
@@ -102,29 +103,7 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   beforeLoad: authGuards.smartRedirect,
-  component: () => {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-8">Welcome to PromptDepot</h1>
-          <div className="space-x-4">
-            <Link
-              to="/login"
-              className="bg-primary hover:bg-primary-light px-6 py-3 rounded-lg font-medium transition-colors"
-            >
-              Login
-            </Link>
-            <Link
-              to="/register"
-              className="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-medium transition-colors"
-            >
-              Register
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  },
+  component: LandingPage,
 });
 
 // Create the route tree
@@ -133,6 +112,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   registrationRoute,
   dashboardRoute,
+  projectViewRoute,
 ]);
 
 // Create the router

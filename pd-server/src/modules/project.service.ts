@@ -237,4 +237,107 @@ export class ProjectService {
       throw new Error(`Failed to delete project: ${error.message}`);
     }
   }
+
+  /**
+   * Get detailed project structure with directories and prompts up to specified depth
+   */
+  static async getProjectDetails(
+    projectId: string,
+    userId: string,
+    maxDepth: number = 4
+  ): Promise<any | null> {
+    try {
+      // First check if user has access to the project
+      const projectUser = await prisma.projectUser.findUnique({
+        where: {
+          userId_projectId: {
+            userId: userId,
+            projectId: projectId,
+          },
+          permissions: {
+            has: ProjectPermission.VIEW,
+          },
+        },
+        include: {
+          project: {
+            include: {
+              tenant: true,
+              users: {
+                select: {
+                  userId: true,
+                  permissions: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!projectUser) {
+        return null;
+      }
+
+      // Get all directories for this project
+      const directories = await prisma.directory.findMany({
+        where: {
+          projectId: projectId,
+        },
+        include: {
+          prompts: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
+        },
+        orderBy: [
+          { isRoot: 'desc' }, // Root directories first
+          { name: 'asc' },
+        ],
+      });
+
+      // Build hierarchical structure with depth limit
+      const buildHierarchy = (parentId: string | null, currentDepth: number = 0): any[] => {
+        if (currentDepth >= maxDepth) {
+          return [];
+        }
+
+        const children = directories
+          .filter((dir) => dir.parentId === parentId)
+          .map((dir) => ({
+            id: dir.id,
+            name: dir.name,
+            description: dir.description,
+            isRoot: dir.isRoot,
+            type: 'directory' as const,
+            createdAt: dir.createdAt.toISOString(),
+            updatedAt: dir.updatedAt.toISOString(),
+            children: buildHierarchy(dir.id, currentDepth + 1),
+            prompts: dir.prompts.map((prompt) => ({
+              id: prompt.id,
+              name: prompt.name,
+              description: prompt.description,
+              type: 'prompt' as const,
+              createdAt: prompt.createdAt.toISOString(),
+              updatedAt: prompt.updatedAt.toISOString(),
+            })),
+          }));
+
+        return children;
+      };
+
+      const directoryHierarchy = buildHierarchy(null);
+
+      return {
+        ...projectUser.project,
+        permissions: projectUser.permissions,
+        directories: directoryHierarchy,
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to fetch project details: ${error.message}`);
+    }
+  }
 }

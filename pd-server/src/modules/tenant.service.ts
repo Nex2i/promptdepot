@@ -16,16 +16,12 @@ export class TenantService {
    * Create a new tenant in the database
    */
   static async createTenant(tenantData: CreateTenantData): Promise<Tenant> {
-    try {
-      const tenant = await prisma.tenant.create({
-        data: {
-          name: tenantData.name,
-        },
-      });
-      return tenant;
-    } catch (error: any) {
-      throw error;
-    }
+    const tenant = await prisma.tenant.create({
+      data: {
+        name: tenantData.name,
+      },
+    });
+    return tenant;
   }
 
   /**

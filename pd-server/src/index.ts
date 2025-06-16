@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
-import App from './app';
 import { getNetworkAddress } from '@/utils/network';
+import App from './app';
 import { logger } from './libs/logger';
 
 dotenv.config();

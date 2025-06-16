@@ -1,4 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { SupabaseSession } from "../../types";
 
 interface User {
   id: string;
@@ -25,7 +26,7 @@ interface AuthState {
   isLoading: boolean;
   isInitialized: boolean;
   error: string | null;
-  supabaseSession: any;
+  supabaseSession: SupabaseSession | null;
 }
 
 const initialState: AuthState = {
@@ -65,7 +66,11 @@ const authSlice = createSlice({
     },
     registerSuccess: (
       state,
-      action: PayloadAction<{ user: User; tenants: Tenant[]; session: any }>
+      action: PayloadAction<{
+        user: User;
+        tenants: Tenant[];
+        session: SupabaseSession;
+      }>
     ) => {
       state.isLoading = false;
       state.user = action.payload.user;
@@ -87,7 +92,11 @@ const authSlice = createSlice({
     },
     loginSuccess: (
       state,
-      action: PayloadAction<{ user: User; tenants: Tenant[]; session: any }>
+      action: PayloadAction<{
+        user: User;
+        tenants: Tenant[];
+        session: SupabaseSession;
+      }>
     ) => {
       state.isLoading = false;
       state.user = action.payload.user;
@@ -125,7 +134,11 @@ const authSlice = createSlice({
     },
     refreshSuccess: (
       state,
-      action: PayloadAction<{ user: User; tenants: Tenant[]; session: any }>
+      action: PayloadAction<{
+        user: User;
+        tenants: Tenant[];
+        session: SupabaseSession;
+      }>
     ) => {
       state.isLoading = false;
       state.user = action.payload.user;
