@@ -4,10 +4,12 @@ import {
   createRouter,
   Outlet,
   Link,
+  redirect,
 } from "@tanstack/react-router";
 import { Login } from "./components/Login";
 import { Registration } from "./components/Registration";
-import { TenantProjectsList } from "./components/TenantProjectsList";
+import { Dashboard } from "./components/Dashboard";
+import { store } from "./store";
 
 // Root route component
 const RootComponent = () => {
@@ -36,10 +38,24 @@ const registrationRoute = createRoute({
   component: Registration,
 });
 
-const tenantProjectsRoute = createRoute({
+// Protected route for dashboard/projects
+const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/projects",
-  component: TenantProjectsList,
+  component: Dashboard,
+  beforeLoad: ({ location }) => {
+    const state = store.getState();
+    const isAuthenticated = state.auth.isAuthenticated;
+
+    if (!isAuthenticated) {
+      throw redirect({
+        to: "/login",
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+  },
 });
 
 // Create index route that redirects to projects
@@ -76,7 +92,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   registrationRoute,
-  tenantProjectsRoute,
+  dashboardRoute,
 ]);
 
 // Create the router

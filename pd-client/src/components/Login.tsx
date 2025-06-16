@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import {
   loginStart,
   loginSuccess,
   loginFailure,
 } from "../store/slices/authSlice";
+import { supabase } from "../lib/supabaseClient";
+import { apiClient } from "../lib/api";
 
 export function Login() {
   const [email, setEmail] = useState("");
@@ -14,27 +16,50 @@ export function Login() {
   const dispatch = useAppDispatch();
   const { isLoading, error } = useAppSelector((state) => state.auth);
 
+  // Get redirect parameter from URL search params
+  const search = useSearch({ from: "/login" });
+  const redirectTo = (search as any)?.redirect || "/projects";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(loginStart());
 
-    // TODO: Replace with actual API call
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Authenticate with Supabase
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      // Mock successful login
+      if (authError || !authData.session) {
+        dispatch(loginFailure(authError?.message || "Login failed"));
+        return;
+      }
+
+      // Get user info from our backend
+      const response = await apiClient.getMe(authData.session.access_token);
+
+      if (response.error || !response.data) {
+        dispatch(
+          loginFailure(response.error || "Failed to get user information")
+        );
+        return;
+      }
+
+      // Login successful
+      const { user, tenants } = response.data;
+
       dispatch(
         loginSuccess({
-          id: "1",
-          email,
-          name: "Test User",
-          tenantId: "tenant-1",
+          user,
+          tenants,
+          session: authData.session,
         })
       );
 
-      // Navigate to projects page after successful login
-      navigate({ to: "/projects" });
+      // Navigate to redirect URL or projects page after successful login
+      navigate({ to: redirectTo });
     } catch (err) {
       dispatch(loginFailure("Login failed. Please try again."));
     }

@@ -3,6 +3,7 @@ import { Type } from '@sinclair/typebox';
 import { HttpMethods } from '@/utils/HttpMethods';
 import { supabase } from '@/libs/supabaseClient';
 import { UserService, CreateUserData } from '@/modules/user.service';
+import { TenantService, CreateTenantData } from '@/modules/tenant.service';
 
 const basePath = '/auth';
 
@@ -12,6 +13,14 @@ const createUserBodySchema = Type.Object({
   email: Type.String({ format: 'email' }),
   name: Type.Optional(Type.String()),
   avatar: Type.Optional(Type.String()),
+});
+
+// Schema for registration endpoint
+const registerBodySchema = Type.Object({
+  email: Type.String({ format: 'email' }),
+  password: Type.String({ minLength: 8 }),
+  name: Type.String(),
+  tenantName: Type.String(),
 });
 
 // Define schema for login if you were to implement it fully
@@ -25,6 +34,114 @@ const createUserBodySchema = Type.Object({
 // } as const;
 
 export default async function Authentication(fastify: FastifyInstance, _opts: RouteOptions) {
+  // Registration route - Complete onboarding flow
+  fastify.route({
+    method: HttpMethods.POST,
+    url: `${basePath}/register`,
+    schema: {
+      body: registerBodySchema,
+      tags: ['Authentication'],
+      summary: 'Register User and Tenant',
+      description:
+        'Complete registration flow: create user in Supabase, create user and tenant in database',
+    },
+    handler: async (
+      request: FastifyRequest<{
+        Body: {
+          email: string;
+          password: string;
+          name: string;
+          tenantName: string;
+        };
+      }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { email, password, name, tenantName } = request.body;
+
+        // Step 1: Create user in Supabase
+        const { data: supabaseAuth, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+
+        if (signUpError) {
+          fastify.log.error(`Supabase signup error: ${signUpError.message}`);
+          reply.status(400).send({
+            message: 'Failed to create user account',
+            error: signUpError.message,
+          });
+          return;
+        }
+
+        if (!supabaseAuth.user) {
+          reply.status(400).send({
+            message: 'Failed to create user account',
+            error: 'No user returned from Supabase',
+          });
+          return;
+        }
+
+        // Step 2: Create tenant in database
+        const tenant = await TenantService.createTenant({ name: tenantName });
+
+        // Step 3: Create user in database
+        const user = await UserService.createUser({
+          supabaseId: supabaseAuth.user.id,
+          email,
+          name,
+        });
+
+        // Step 4: Link user to tenant as super user
+        await TenantService.addUserToTenant(user.id, tenant.id, true);
+
+        // Step 5: Sign in the user to get session token
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) {
+          fastify.log.error(`Auto sign-in error: ${signInError.message}`);
+          // User was created successfully, but auto sign-in failed
+          reply.status(201).send({
+            message: 'Registration successful. Please log in manually.',
+            user: {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+            },
+            tenant: {
+              id: tenant.id,
+              name: tenant.name,
+            },
+          });
+          return;
+        }
+
+        reply.status(201).send({
+          message: 'Registration successful',
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+          },
+          tenant: {
+            id: tenant.id,
+            name: tenant.name,
+          },
+          session: signInData.session,
+        });
+      } catch (error: any) {
+        fastify.log.error(`Registration error: ${error.message}`);
+        reply.status(500).send({
+          message: 'Failed to complete registration',
+          error: error.message,
+        });
+      }
+    },
+  });
+
   // Create User route - Called after successful Supabase signup
   fastify.route({
     method: HttpMethods.POST,
@@ -90,6 +207,9 @@ export default async function Authentication(fastify: FastifyInstance, _opts: Ro
           return;
         }
 
+        // Fetch user's tenants
+        const userTenants = await TenantService.getUserTenants(dbUser.id);
+
         reply.send({
           user: {
             id: dbUser.id,
@@ -99,6 +219,13 @@ export default async function Authentication(fastify: FastifyInstance, _opts: Ro
             createdAt: dbUser.createdAt,
             updatedAt: dbUser.updatedAt,
           },
+          tenants: userTenants.map((ut) => ({
+            id: ut.tenant.id,
+            name: ut.tenant.name,
+            isSuperUser: ut.isSuperUser,
+            createdAt: ut.tenant.createdAt,
+            updatedAt: ut.tenant.updatedAt,
+          })),
           supabaseUser: {
             id: supabaseUser.id,
             email: supabaseUser.email,

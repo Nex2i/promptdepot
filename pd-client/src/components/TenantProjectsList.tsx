@@ -65,24 +65,6 @@ export function TenantProjectsList() {
     dispatch(selectProject(project));
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">
-            Please log in to view projects
-          </h2>
-          <Link
-            to="/login"
-            className="bg-primary hover:bg-primary-light px-6 py-3 rounded-lg font-medium transition-colors"
-          >
-            Go to Login
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen px-4 py-8">
       <div className="max-w-6xl mx-auto">
@@ -95,7 +77,7 @@ export function TenantProjectsList() {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-400">
-                Welcome, {user.name}
+                Welcome, {user?.name}
               </span>
               <button className="bg-primary hover:bg-primary-light px-4 py-2 rounded-lg font-medium transition-colors">
                 New Project

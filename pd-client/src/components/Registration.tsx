@@ -1,8 +1,18 @@
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import {
+  registerStart,
+  registerSuccess,
+  registerFailure,
+} from "../store/slices/authSlice";
+import { apiClient } from "../lib/api";
 
 export function Registration() {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const { isLoading, error } = useAppSelector((state) => state.auth);
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -10,8 +20,6 @@ export function Registration() {
     confirmPassword: "",
     tenantName: "",
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -23,34 +31,56 @@ export function Registration() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
 
     // Basic validation
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      dispatch(registerFailure("Passwords do not match"));
       return;
     }
 
     if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long");
+      dispatch(registerFailure("Password must be at least 8 characters long"));
       return;
     }
 
-    setIsLoading(true);
+    dispatch(registerStart());
 
     try {
-      // TODO: Replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const response = await apiClient.register({
+        email: formData.email,
+        password: formData.password,
+        name: formData.name,
+        tenantName: formData.tenantName,
+      });
 
-      // Mock successful registration
-      console.log("Registration successful:", formData);
+      if (response.error || !response.data) {
+        dispatch(registerFailure(response.error || "Registration failed"));
+        return;
+      }
 
-      // Navigate to login page after successful registration
-      navigate({ to: "/login" });
+      // Registration successful
+      const { user, tenant, session } = response.data;
+
+      dispatch(
+        registerSuccess({
+          user,
+          tenants: [
+            {
+              id: tenant.id,
+              name: tenant.name,
+              isSuperUser: true,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          ],
+          session,
+        })
+      );
+
+      // Auto-redirect to projects page
+      navigate({ to: "/projects" });
     } catch (err) {
-      setError("Registration failed. Please try again.");
-    } finally {
-      setIsLoading(false);
+      dispatch(registerFailure("Registration failed. Please try again."));
     }
   };
 
