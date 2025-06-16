@@ -6,12 +6,21 @@ import {
   FolderIcon,
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
-import { useProjectDetails } from "../hooks/useProjects";
+import {
+  useProjectDetails,
+  useCreateDirectory,
+  useCreatePrompt,
+  usePromptDetails,
+} from "../hooks/useProjects";
 import { type DirectoryItem } from "../lib/projectService";
+import { CreateDirectoryModal } from "./CreateDirectoryModal";
+import { CreatePromptModal } from "./CreatePromptModal";
 
 interface ProjectViewState {
   expandedDirectories: Set<string>;
   selectedItem: DirectoryItem | null;
+  showCreateDirectoryModal: boolean;
+  showCreatePromptModal: boolean;
 }
 
 export function ProjectView() {
@@ -20,6 +29,8 @@ export function ProjectView() {
   const [state, setState] = useState<ProjectViewState>({
     expandedDirectories: new Set(),
     selectedItem: null,
+    showCreateDirectoryModal: false,
+    showCreatePromptModal: false,
   });
 
   // Use TanStack Query to fetch project details
@@ -29,6 +40,18 @@ export function ProjectView() {
     error,
     isError,
   } = useProjectDetails(projectId);
+
+  // Create mutations
+  const createDirectoryMutation = useCreateDirectory();
+  const createPromptMutation = useCreatePrompt();
+
+  // Fetch prompt details when a prompt is selected
+  const { data: selectedPromptDetails, isLoading: isLoadingPromptDetails } =
+    usePromptDetails(
+      projectId,
+      state.selectedItem?.type === "prompt" ? state.selectedItem.id : "",
+      state.selectedItem?.type === "prompt"
+    );
 
   // Auto-expand root directories when project data loads
   React.useEffect(() => {
@@ -58,6 +81,46 @@ export function ProjectView() {
 
   const selectItem = (item: DirectoryItem) => {
     setState((prev) => ({ ...prev, selectedItem: item }));
+  };
+
+  const handleCreateDirectory = () => {
+    setState((prev) => ({ ...prev, showCreateDirectoryModal: true }));
+  };
+
+  const handleCreatePrompt = () => {
+    setState((prev) => ({ ...prev, showCreatePromptModal: true }));
+  };
+
+  const handleCloseCreateDirectoryModal = () => {
+    setState((prev) => ({ ...prev, showCreateDirectoryModal: false }));
+  };
+
+  const handleCloseCreatePromptModal = () => {
+    setState((prev) => ({ ...prev, showCreatePromptModal: false }));
+  };
+
+  // Determine default parent directory for new directories
+  const getDefaultParentDirectoryId = (): string | undefined => {
+    if (state.selectedItem?.type === "directory") {
+      return state.selectedItem.id;
+    }
+    // If no directory is selected or a prompt is selected, return undefined (root level)
+    return undefined;
+  };
+
+  // Determine default directory for new prompts
+  const getDefaultDirectoryId = (): string | undefined => {
+    if (state.selectedItem?.type === "directory") {
+      return state.selectedItem.id;
+    }
+    // If a prompt is selected, we need to find its directory
+    // For now, return the first available directory or undefined
+    if (project?.directories && project.directories.length > 0) {
+      // Find first root directory
+      const rootDir = project.directories.find((dir) => dir.isRoot);
+      return rootDir?.id;
+    }
+    return undefined;
   };
 
   const renderDirectoryTree = (
@@ -239,10 +302,16 @@ export function ProjectView() {
               )}
             </div>
             <div className="flex space-x-2">
-              <button className="bg-primary hover:bg-primary-light px-4 py-2 rounded-lg font-medium transition-colors">
+              <button
+                onClick={handleCreateDirectory}
+                className="bg-primary hover:bg-primary-light px-4 py-2 rounded-lg font-medium transition-colors"
+              >
                 New Directory
               </button>
-              <button className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-medium transition-colors">
+              <button
+                onClick={handleCreatePrompt}
+                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-medium transition-colors"
+              >
                 New Prompt
               </button>
             </div>
@@ -309,11 +378,32 @@ export function ProjectView() {
               {state.selectedItem.type === "prompt" && (
                 <div>
                   <h4 className="font-semibold mb-2">Prompt Content</h4>
-                  <div className="bg-gray-800 rounded p-4">
-                    <p className="text-gray-400 italic">
-                      Prompt content will be displayed here...
-                    </p>
-                  </div>
+                  {isLoadingPromptDetails ? (
+                    <div className="bg-gray-800 rounded p-4">
+                      <div className="animate-pulse">
+                        <div className="h-4 bg-gray-600 rounded mb-2"></div>
+                        <div className="h-4 bg-gray-600 rounded mb-2"></div>
+                        <div className="h-4 bg-gray-600 rounded w-3/4"></div>
+                      </div>
+                    </div>
+                  ) : selectedPromptDetails ? (
+                    <div className="bg-gray-800 rounded p-4">
+                      <div className="mb-4">
+                        <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded">
+                          {selectedPromptDetails.directoryName}
+                        </span>
+                      </div>
+                      <pre className="text-gray-300 whitespace-pre-wrap font-mono text-sm">
+                        {selectedPromptDetails.content}
+                      </pre>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-800 rounded p-4">
+                      <p className="text-gray-400 italic">
+                        Failed to load prompt content
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -330,6 +420,24 @@ export function ProjectView() {
           )}
         </div>
       </div>
+
+      {/* Create Directory Modal */}
+      <CreateDirectoryModal
+        isOpen={state.showCreateDirectoryModal}
+        onClose={handleCloseCreateDirectoryModal}
+        projectId={projectId}
+        defaultParentId={getDefaultParentDirectoryId()}
+        createMutation={createDirectoryMutation}
+      />
+
+      {/* Create Prompt Modal */}
+      <CreatePromptModal
+        isOpen={state.showCreatePromptModal}
+        onClose={handleCloseCreatePromptModal}
+        projectId={projectId}
+        defaultDirectoryId={getDefaultDirectoryId()}
+        createMutation={createPromptMutation}
+      />
     </div>
   );
 }

@@ -340,4 +340,293 @@ export class ProjectService {
       throw new Error(`Failed to fetch project details: ${error.message}`);
     }
   }
+
+  /**
+   * Create a new directory in a project
+   */
+  static async createDirectory(
+    projectId: string,
+    userId: string,
+    data: {
+      name: string;
+      description?: string;
+      parentId?: string;
+    }
+  ): Promise<any | null> {
+    try {
+      // Check if user has edit permissions
+      const projectUser = await prisma.projectUser.findUnique({
+        where: {
+          userId_projectId: {
+            userId: userId,
+            projectId: projectId,
+          },
+          permissions: {
+            has: ProjectPermission.EDIT,
+          },
+        },
+      });
+
+      if (!projectUser) {
+        throw new Error('No permission to create directory in this project');
+      }
+
+      // If parentId is provided, verify it exists and belongs to this project
+      if (data.parentId) {
+        const parentDirectory = await prisma.directory.findFirst({
+          where: {
+            id: data.parentId,
+            projectId: projectId,
+          },
+        });
+
+        if (!parentDirectory) {
+          throw new Error('Parent directory not found or does not belong to this project');
+        }
+      }
+
+      // Create the directory
+      const directory = await prisma.directory.create({
+        data: {
+          name: data.name,
+          description: data.description,
+          projectId: projectId,
+          parentId: data.parentId || null,
+          isRoot: !data.parentId, // Root if no parent
+        },
+      });
+
+      return {
+        id: directory.id,
+        name: directory.name,
+        description: directory.description,
+        isRoot: directory.isRoot,
+        type: 'directory' as const,
+        createdAt: directory.createdAt.toISOString(),
+        updatedAt: directory.updatedAt.toISOString(),
+        children: [],
+        prompts: [],
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to create directory: ${error.message}`);
+    }
+  }
+
+  /**
+   * Create a new prompt in a directory
+   */
+  static async createPrompt(
+    projectId: string,
+    userId: string,
+    data: {
+      name: string;
+      description?: string;
+      directoryId: string;
+    }
+  ): Promise<any | null> {
+    try {
+      // Check if user has edit permissions
+      const projectUser = await prisma.projectUser.findUnique({
+        where: {
+          userId_projectId: {
+            userId: userId,
+            projectId: projectId,
+          },
+          permissions: {
+            has: ProjectPermission.EDIT,
+          },
+        },
+      });
+
+      if (!projectUser) {
+        throw new Error('No permission to create prompt in this project');
+      }
+
+      // Verify the directory exists and belongs to this project
+      const directory = await prisma.directory.findFirst({
+        where: {
+          id: data.directoryId,
+          projectId: projectId,
+        },
+      });
+
+      if (!directory) {
+        throw new Error('Directory not found or does not belong to this project');
+      }
+
+      // Create the prompt
+      const prompt = await prisma.prompt.create({
+        data: {
+          name: data.name,
+          description: data.description,
+          directoryId: data.directoryId,
+        },
+      });
+
+      return {
+        id: prompt.id,
+        name: prompt.name,
+        description: prompt.description,
+        type: 'prompt' as const,
+        createdAt: prompt.createdAt.toISOString(),
+        updatedAt: prompt.updatedAt.toISOString(),
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to create prompt: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get all directories in a project (flat list for dropdown selection)
+   */
+  static async getProjectDirectories(projectId: string, userId: string): Promise<any[]> {
+    try {
+      // Check if user has view permissions
+      const projectUser = await prisma.projectUser.findUnique({
+        where: {
+          userId_projectId: {
+            userId: userId,
+            projectId: projectId,
+          },
+          permissions: {
+            has: ProjectPermission.VIEW,
+          },
+        },
+      });
+
+      if (!projectUser) {
+        return [];
+      }
+
+      // Get all directories for this project
+      const directories = await prisma.directory.findMany({
+        where: {
+          projectId: projectId,
+        },
+        orderBy: [{ isRoot: 'desc' }, { name: 'asc' }],
+      });
+
+      return directories.map((dir) => ({
+        id: dir.id,
+        name: dir.name,
+        description: dir.description,
+        isRoot: dir.isRoot,
+        parentId: dir.parentId,
+      }));
+    } catch (error: any) {
+      throw new Error(`Failed to fetch project directories: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get directory with full content details
+   */
+  static async getDirectoryDetails(directoryId: string, userId: string): Promise<any | null> {
+    try {
+      // Get directory with project info to check permissions
+      const directory = await prisma.directory.findUnique({
+        where: {
+          id: directoryId,
+        },
+        include: {
+          project: {
+            include: {
+              users: {
+                where: {
+                  userId: userId,
+                  permissions: {
+                    has: ProjectPermission.VIEW,
+                  },
+                },
+              },
+            },
+          },
+          prompts: true,
+          children: true,
+        },
+      });
+
+      if (!directory || directory.project.users.length === 0) {
+        return null;
+      }
+
+      return {
+        id: directory.id,
+        name: directory.name,
+        description: directory.description,
+        isRoot: directory.isRoot,
+        type: 'directory' as const,
+        createdAt: directory.createdAt.toISOString(),
+        updatedAt: directory.updatedAt.toISOString(),
+        children: directory.children.map((child) => ({
+          id: child.id,
+          name: child.name,
+          description: child.description,
+          isRoot: child.isRoot,
+          type: 'directory' as const,
+          createdAt: child.createdAt.toISOString(),
+          updatedAt: child.updatedAt.toISOString(),
+        })),
+        prompts: directory.prompts.map((prompt) => ({
+          id: prompt.id,
+          name: prompt.name,
+          description: prompt.description,
+          type: 'prompt' as const,
+          createdAt: prompt.createdAt.toISOString(),
+          updatedAt: prompt.updatedAt.toISOString(),
+        })),
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to fetch directory details: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get prompt with full details including content
+   */
+  static async getPromptDetails(promptId: string, userId: string): Promise<any | null> {
+    try {
+      // Get prompt with directory and project info to check permissions
+      const prompt = await prisma.prompt.findUnique({
+        where: {
+          id: promptId,
+        },
+        include: {
+          directory: {
+            include: {
+              project: {
+                include: {
+                  users: {
+                    where: {
+                      userId: userId,
+                      permissions: {
+                        has: ProjectPermission.VIEW,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!prompt || prompt.directory.project.users.length === 0) {
+        return null;
+      }
+
+      return {
+        id: prompt.id,
+        name: prompt.name,
+        description: prompt.description,
+        type: 'prompt' as const,
+        createdAt: prompt.createdAt.toISOString(),
+        updatedAt: prompt.updatedAt.toISOString(),
+        directoryId: prompt.directoryId,
+        directoryName: prompt.directory.name,
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to fetch prompt details: ${error.message}`);
+    }
+  }
 }

@@ -12,6 +12,7 @@ export const projectKeys = {
   detail: (id: string) => [...projectKeys.all, "detail", id] as const,
   detailWithStructure: (id: string) =>
     [...projectKeys.all, "detail-structure", id] as const,
+  directories: (id: string) => [...projectKeys.all, "directories", id] as const,
 } as const;
 
 /**
@@ -86,4 +87,75 @@ export function usePrefetchProject() {
       staleTime: 5 * 60 * 1000,
     });
   };
+}
+
+/**
+ * Hook to create a new directory
+ */
+export function useCreateDirectory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, data }: { projectId: string; data: any }) =>
+      projectService.createDirectory(projectId, data),
+    onSuccess: (newDirectory, { projectId }) => {
+      // Invalidate project details to refresh the structure
+      queryClient.invalidateQueries({
+        queryKey: projectKeys.detailWithStructure(projectId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: projectKeys.directories(projectId),
+      });
+    },
+  });
+}
+
+/**
+ * Hook to create a new prompt
+ */
+export function useCreatePrompt() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, data }: { projectId: string; data: any }) =>
+      projectService.createPrompt(projectId, data),
+    onSuccess: (newPrompt, { projectId }) => {
+      // Invalidate project details to refresh the structure
+      queryClient.invalidateQueries({
+        queryKey: projectKeys.detailWithStructure(projectId),
+      });
+    },
+  });
+}
+
+/**
+ * Hook to fetch project directories (for dropdowns)
+ */
+export function useProjectDirectories(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: projectKeys.directories(projectId),
+    queryFn: () => projectService.getProjectDirectories(projectId),
+    enabled: enabled && !!projectId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+/**
+ * Hook to fetch prompt details with content
+ */
+export function usePromptDetails(
+  projectId: string,
+  promptId: string,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: [
+      ...projectKeys.detailWithStructure(projectId),
+      "prompt",
+      promptId,
+    ],
+    queryFn: () => projectService.getPromptDetails(projectId, promptId),
+    enabled: enabled && !!projectId && !!promptId,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
 }

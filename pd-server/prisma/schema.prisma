@@ -25,8 +25,9 @@ model User {
     updatedAt  DateTime @updatedAt
 
     // Relationships
-    tenants  UserTenant[]
-    projects ProjectUser[]
+    tenants       UserTenant[]
+    projects      ProjectUser[]
+    promptCommits PromptCommit[]
 
     @@map("users")
 }
@@ -121,14 +122,40 @@ model Directory {
 model Prompt {
     id          String   @id @default(cuid())
     name        String
-    content     String
     description String?
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
 
+    // Version Control
+    currentCommitId String?       @unique
+    currentCommit   PromptCommit? @relation("CurrentCommit", fields: [currentCommitId], references: [id])
+
     // Relationships
-    directory   Directory @relation(fields: [directoryId], references: [id], onDelete: Cascade)
+    directory   Directory      @relation(fields: [directoryId], references: [id], onDelete: Cascade)
     directoryId String
+    commits     PromptCommit[] @relation("PromptCommits")
 
     @@map("prompts")
+}
+
+model PromptCommit {
+    id        String   @id @default(cuid())
+    content   String // The actual prompt content for this version
+    message   String? // Commit message describing the changes
+    version   Int // Sequential version number (1, 2, 3, etc.)
+    createdAt DateTime @default(now())
+
+    // Relationships
+    prompt   Prompt @relation("PromptCommits", fields: [promptId], references: [id], onDelete: Cascade)
+    promptId String
+
+    author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    authorId String
+
+    // Current commit relationship (one prompt can have one current commit)
+    currentForPrompt Prompt? @relation("CurrentCommit")
+
+    // Ensure version numbers are unique per prompt
+    @@unique([promptId, version])
+    @@map("prompt_commits")
 }
