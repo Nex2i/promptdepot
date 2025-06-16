@@ -1,64 +1,20 @@
-import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-
-interface Project {
-  id: string;
-  name: string;
-  description: string;
-  tenantId: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { createSlice } from "@reduxjs/toolkit";
 
 interface DashboardState {
-  projects: Project[];
-  isLoading: boolean;
-  error: string | null;
-  selectedProject: Project | null;
+  // Keep other dashboard-specific state here if needed in the future
+  // For now, this can be minimal or empty
 }
 
-const initialState: DashboardState = {
-  projects: [],
-  isLoading: false,
-  error: null,
-  selectedProject: null,
-};
+const initialState: DashboardState = {};
 
 const dashboardSlice = createSlice({
   name: "dashboard",
   initialState,
   reducers: {
-    fetchProjectsStart: (state) => {
-      state.isLoading = true;
-      state.error = null;
-    },
-    fetchProjectsSuccess: (state, action: PayloadAction<Project[]>) => {
-      state.isLoading = false;
-      state.projects = action.payload;
-      state.error = null;
-    },
-    fetchProjectsFailure: (state, action: PayloadAction<string>) => {
-      state.isLoading = false;
-      state.error = action.payload;
-    },
-    selectProject: (state, action: PayloadAction<Project>) => {
-      state.selectedProject = action.payload;
-    },
-    clearSelectedProject: (state) => {
-      state.selectedProject = null;
-    },
-    clearError: (state) => {
-      state.error = null;
-    },
+    // Add dashboard-specific actions here if needed in the future
   },
 });
 
-export const {
-  fetchProjectsStart,
-  fetchProjectsSuccess,
-  fetchProjectsFailure,
-  selectProject,
-  clearSelectedProject,
-  clearError,
-} = dashboardSlice.actions;
+export const {} = dashboardSlice.actions;
 
 export default dashboardSlice.reducer;

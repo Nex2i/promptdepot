@@ -1,112 +1,119 @@
 import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { useAppSelector } from "../store/hooks";
-import { authService } from "../lib/authService";
+import { useProjects, useCreateProject } from "../hooks/useProjects";
+import { CreateProjectModal } from "./CreateProjectModal";
+import { ViewWrapper } from "./ViewWrapper";
 
 export function Dashboard() {
-  const navigate = useNavigate();
   const { user, currentTenant } = useAppSelector((state) => state.auth);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
 
-  const handleLogout = async () => {
-    try {
-      await authService.signOut();
-      navigate({ to: "/login" });
-    } catch (error) {
-      console.error("Logout error:", error);
-      // Navigate to login even if logout fails
-      navigate({ to: "/login" });
-    }
+  // Use TanStack Query for project data
+  const { data: projects = [], isLoading, error, refetch } = useProjects();
+
+  const createProjectMutation = useCreateProject();
+
+  const handleProjectClick = (project: any) => {
+    setSelectedProject(project);
+  };
+
+  const handleCreateProject = () => {
+    setShowCreateProjectModal(true);
+  };
+
+  const handleCloseCreateProjectModal = () => {
+    setShowCreateProjectModal(false);
+  };
+
+  const handleRetryFetch = () => {
+    refetch();
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      {/* Header Navigation */}
-      <header className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Left side - Logo and Projects button */}
-            <div className="flex items-center space-x-8">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">
-                PromptDepot
-              </h1>
-              <button className="bg-primary hover:bg-primary-light px-4 py-2 rounded-lg font-medium transition-colors">
-                Projects
-              </button>
-            </div>
+    <ViewWrapper onCreateProject={handleCreateProject}>
+      {/* Welcome Section */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name}!</h1>
+        <p className="text-gray-400">
+          Get started by creating your first project in {currentTenant?.name}
+        </p>
+      </div>
 
-            {/* Right side - Profile Menu */}
-            <div className="relative">
-              <button
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center space-x-3 text-gray-300 hover:text-white transition-colors"
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="ml-3 text-gray-400">Loading projects...</span>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !isLoading && (
+        <div className="text-center py-16">
+          <div className="max-w-md mx-auto">
+            <div className="w-16 h-16 mx-auto mb-6 bg-red-500/10 rounded-full flex items-center justify-center">
+              <svg
+                className="w-8 h-8 text-red-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium">
-                    {user?.name?.charAt(0)?.toUpperCase() || "U"}
-                  </span>
-                </div>
-                <div className="hidden md:block text-left">
-                  <div className="text-sm font-medium">{user?.name}</div>
-                  <div className="text-xs text-gray-400">
-                    {currentTenant?.name}
-                  </div>
-                </div>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    showProfileMenu ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-
-              {/* Profile Dropdown Menu */}
-              {showProfileMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-50">
-                  <div className="py-2">
-                    <div className="px-4 py-2 border-b border-gray-700">
-                      <div className="text-sm font-medium">{user?.email}</div>
-                      <div className="text-xs text-gray-400">
-                        {currentTenant?.name} •{" "}
-                        {currentTenant?.isSuperUser ? "Admin" : "Member"}
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
-                    >
-                      Logout
-                    </button>
-                  </div>
-                </div>
-              )}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
             </div>
+            <h2 className="text-2xl font-bold mb-4 text-red-400">
+              Error Loading Projects
+            </h2>
+            <p className="text-gray-400 mb-8">
+              {error instanceof Error ? error.message : "An error occurred"}
+            </p>
+            <button
+              onClick={handleRetryFetch}
+              className="bg-primary hover:bg-primary-light px-6 py-3 rounded-lg font-medium transition-colors"
+            >
+              Try Again
+            </button>
           </div>
         </div>
-      </header>
+      )}
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            Welcome back, {user?.name}!
-          </h1>
-          <p className="text-gray-400">
-            Get started by creating your first project in {currentTenant?.name}
-          </p>
+      {/* Projects Grid */}
+      {!isLoading && !error && projects.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {projects.map((project) => (
+            <div
+              key={project.id}
+              onClick={() => handleProjectClick(project)}
+              className={`bg-white/5 rounded-lg p-6 cursor-pointer transition-all hover:bg-white/10 hover:-translate-y-1 ${
+                selectedProject?.id === project.id ? "ring-2 ring-primary" : ""
+              }`}
+            >
+              <h3 className="text-xl font-semibold mb-3">{project.name}</h3>
+              <p className="text-gray-400 mb-4 line-clamp-2">
+                {project.description || "No description provided"}
+              </p>
+              <div className="flex justify-between items-center text-sm text-gray-500">
+                <span>
+                  Created: {new Date(project.createdAt).toLocaleDateString()}
+                </span>
+                <span className="text-primary">
+                  {project.permissions.length} permission
+                  {project.permissions.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
+      )}
 
-        {/* No Projects State */}
+      {/* No Projects State */}
+      {!isLoading && !error && projects.length === 0 && (
         <div className="text-center py-16">
           <div className="max-w-md mx-auto">
             <div className="w-16 h-16 mx-auto mb-6 bg-gray-800 rounded-full flex items-center justify-center">
@@ -129,12 +136,56 @@ export function Dashboard() {
               Projects help you organize and manage your prompts. Create your
               first project to get started.
             </p>
-            <button className="bg-primary hover:bg-primary-light px-6 py-3 rounded-lg font-medium transition-colors">
+            <button
+              onClick={handleCreateProject}
+              className="bg-primary hover:bg-primary-light px-6 py-3 rounded-lg font-medium transition-colors"
+            >
               Create Your First Project
             </button>
           </div>
         </div>
-      </main>
-    </div>
+      )}
+
+      {/* Selected Project Info */}
+      {selectedProject && !isLoading && (
+        <div className="mt-8 bg-white/5 rounded-lg p-6">
+          <h2 className="text-2xl font-bold mb-4">Selected Project</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h3 className="font-semibold mb-2">Project Details</h3>
+              <p className="mb-1">
+                <strong>Name:</strong> {selectedProject.name}
+              </p>
+              <p className="mb-1">
+                <strong>Description:</strong>{" "}
+                {selectedProject.description || "No description"}
+              </p>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">Metadata</h3>
+              <p className="mb-1">
+                <strong>Created:</strong>{" "}
+                {new Date(selectedProject.createdAt).toLocaleString()}
+              </p>
+              <p className="mb-1">
+                <strong>Updated:</strong>{" "}
+                {new Date(selectedProject.updatedAt).toLocaleString()}
+              </p>
+              <p>
+                <strong>Permissions:</strong>{" "}
+                {selectedProject.permissions.join(", ")}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Project Modal */}
+      <CreateProjectModal
+        isOpen={showCreateProjectModal}
+        onClose={handleCloseCreateProjectModal}
+        createMutation={createProjectMutation}
+      />
+    </ViewWrapper>
   );
 }
