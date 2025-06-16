@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import {
@@ -11,7 +11,9 @@ import { apiClient } from "../lib/api";
 export function Registration() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { isLoading, error } = useAppSelector((state) => state.auth);
+  const { isLoading, error, isAuthenticated } = useAppSelector(
+    (state) => state.auth
+  );
 
   const [formData, setFormData] = useState({
     name: "",
@@ -20,6 +22,13 @@ export function Registration() {
     confirmPassword: "",
     tenantName: "",
   });
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate({ to: "/projects" });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -196,6 +205,13 @@ export function Registration() {
             >
               {isLoading ? "Creating account..." : "Create account"}
             </button>
+          </div>
+
+          <div className="text-center">
+            <p className="text-xs text-gray-400">
+              By creating an account, you agree to our Terms of Service and
+              Privacy Policy
+            </p>
           </div>
         </form>
       </div>

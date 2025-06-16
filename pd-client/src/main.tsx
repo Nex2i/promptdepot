@@ -5,11 +5,14 @@ import { RouterProvider } from "@tanstack/react-router";
 import "./index.css";
 import { store } from "./store";
 import { router } from "./router";
+import { AuthProvider } from "./components/AuthProvider";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <Provider store={store}>
-      <RouterProvider router={router} />
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
     </Provider>
   </StrictMode>
 );

@@ -9,7 +9,56 @@ import {
 import { Login } from "./components/Login";
 import { Registration } from "./components/Registration";
 import { Dashboard } from "./components/Dashboard";
-import { store } from "./store";
+import { authService } from "./lib/authService";
+
+// Shared auth guard functions
+const authGuards = {
+  /**
+   * For protected routes - requires authentication
+   * Redirects to login if not authenticated
+   */
+  requireAuth: async ({ location }: { location: any }) => {
+    const isAuthenticated = await authService.isAuthenticated();
+
+    if (!isAuthenticated) {
+      throw redirect({
+        to: "/login",
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+  },
+
+  /**
+   * For public routes - redirects to dashboard if already authenticated
+   * Prevents authenticated users from accessing login/register pages
+   */
+  redirectIfAuthenticated: async () => {
+    const isAuthenticated = await authService.isAuthenticated();
+
+    if (isAuthenticated) {
+      throw redirect({
+        to: "/projects",
+      });
+    }
+  },
+
+  /**
+   * For landing page - smart redirect based on auth status
+   * Authenticated users go to dashboard, unauthenticated see landing page
+   */
+  smartRedirect: async () => {
+    const isAuthenticated = await authService.isAuthenticated();
+
+    if (isAuthenticated) {
+      throw redirect({
+        to: "/projects",
+      });
+    }
+    // If not authenticated, let the component render normally
+  },
+};
 
 // Root route component
 const RootComponent = () => {
@@ -25,17 +74,19 @@ const rootRoute = createRootRoute({
   component: RootComponent,
 });
 
-// Create child routes
+// Create child routes with shared auth guards
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
   component: Login,
+  beforeLoad: authGuards.redirectIfAuthenticated,
 });
 
 const registrationRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/register",
   component: Registration,
+  beforeLoad: authGuards.redirectIfAuthenticated,
 });
 
 // Protected route for dashboard/projects
@@ -43,25 +94,14 @@ const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/projects",
   component: Dashboard,
-  beforeLoad: ({ location }) => {
-    const state = store.getState();
-    const isAuthenticated = state.auth.isAuthenticated;
-
-    if (!isAuthenticated) {
-      throw redirect({
-        to: "/login",
-        search: {
-          redirect: location.href,
-        },
-      });
-    }
-  },
+  beforeLoad: authGuards.requireAuth,
 });
 
-// Create index route that redirects to projects
+// Create index route that checks auth and redirects appropriately
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
+  beforeLoad: authGuards.smartRedirect,
   component: () => {
     return (
       <div className="flex items-center justify-center min-h-screen">

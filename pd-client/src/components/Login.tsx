@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import {
@@ -14,11 +14,20 @@ export function Login() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { isLoading, error } = useAppSelector((state) => state.auth);
+  const { isLoading, error, isAuthenticated } = useAppSelector(
+    (state) => state.auth
+  );
 
   // Get redirect parameter from URL search params
   const search = useSearch({ from: "/login" });
   const redirectTo = (search as any)?.redirect || "/projects";
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate({ to: "/projects" });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

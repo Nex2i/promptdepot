@@ -1,29 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { logout } from "../store/slices/authSlice";
-import { supabase } from "../lib/supabaseClient";
+import { useAppSelector } from "../store/hooks";
+import { authService } from "../lib/authService";
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
   const { user, currentTenant } = useAppSelector((state) => state.auth);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const handleLogout = async () => {
     try {
-      // Sign out from Supabase
-      await supabase.auth.signOut();
-
-      // Clear Redux state
-      dispatch(logout());
-
-      // Navigate to login
+      await authService.signOut();
       navigate({ to: "/login" });
     } catch (error) {
       console.error("Logout error:", error);
-      // Still logout locally even if Supabase logout fails
-      dispatch(logout());
+      // Navigate to login even if logout fails
       navigate({ to: "/login" });
     }
   };
